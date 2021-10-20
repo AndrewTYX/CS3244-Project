@@ -59,17 +59,16 @@ def generate_training_combination(input_path_list, label_path_list):
     return product(input_path_list, label_path_list)
 
 # Data Access
-input_path_list = ['./ct_interpolated_3.npy', './ct_interpolated_5.npy','./ct_interpolated_10.npy']
+channel_size = [3, 5, 10, 15, 20, 30, 50, 70, 90]
 label_path_list = ['./avg_change.npy']
 
 # Training parameter
 BATCH_SIZE = 8
 
-for (input_path, label_path) in generate_training_combination(input_path_list, label_path_list):
+for (channel_num, label_path) in generate_training_combination(channel_size, label_path_list):
+    input_path = f'./ct_interpolated_{channel_num}.npy'
     if not os.path.exists(input_path):
-        basename = os.path.basename(input_path)
-        number = basename.split('.')[0].split('_')[2]
-        save_np_arr_with_channel(int(number))
+        save_np_arr_with_channel(channel_num)
     
     ds = build_ds_from(input_path, label_path)
     input_shape = ds.element_spec[0].shape
