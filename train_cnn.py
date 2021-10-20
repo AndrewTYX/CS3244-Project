@@ -4,6 +4,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from itertools import product
+from generate_data import save_np_arr_with_channel
 
 # Layers and Models import
 from tensorflow.keras.layers import Input, Conv3D, MaxPool3D, BatchNormalization, Flatten, Dense, Dropout
@@ -65,8 +66,14 @@ label_path_list = ['./avg_change.npy']
 BATCH_SIZE = 8
 
 for (input_path, label_path) in generate_training_combination(input_path_list, label_path_list):
+    if not os.path.exists(input_path):
+        basename = os.path.basename(input_path)
+        number = basename.split('.')[0].split('_')[2]
+        save_np_arr_with_channel(int(number))
+    
     ds = build_ds_from(input_path, label_path)
     input_shape = ds.element_spec[0].shape
+    
     print(input_shape)
         
     input_name = os.path.basename(input_path).split('.')[0]
