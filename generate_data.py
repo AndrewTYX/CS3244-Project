@@ -9,8 +9,6 @@ import pydicom
 import os
 import cv2
 
-chennel_size = sys.argv[1]
-
 BAD_IDS = {'ID00011637202177653955184', 'ID00052637202186188008618'}
 ct_data_path = './train'
 

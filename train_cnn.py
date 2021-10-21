@@ -78,6 +78,12 @@ for (channel_num, label_path) in generate_training_combination(channel_size, lab
     input_name = os.path.basename(input_path).split('.')[0]
     label_name = os.path.basename(label_path).split('.')[0]
 
+    model_path = f'./model_checkpoints/{input_name}_{label_name}'
+    csv_log_path = f'./train_logs/{input_name}_{label_name}'
+    
+    if os.path.exists(model_path):
+        continue
+    
     tf.debugging.set_log_device_placement(True)
     
     gpus = tf.config.list_logical_devices('GPU')
