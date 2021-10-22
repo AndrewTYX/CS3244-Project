@@ -58,12 +58,24 @@ def build_ds_from(input_path, label_path):
 def generate_training_combination(input_path_list, label_path_list):
     return product(input_path_list, label_path_list)
 
+def split_ds(ds, train_rate, val_rate, test_rate):
+    size = ds.cardinality().numpy()
+    train_size = int(train_rate * size)
+    val_size = int(val_rate * size)
+    test_size = int(test_rate * size)
+    
+    train_ds = ds.take(train_size)
+    test_ds = ds.skip(train_size)
+    val_ds = test_ds.skip(test_size)
+    test_ds = test_ds.take(test_size)
+    
+    return train_ds, val_ds, test_ds
+    
 # Data Access
 channel_size = [3, 5, 10, 15, 20, 30, 50, 70, 90]
 label_path_list = ['./avg_change.npy']
-
 # Training parameter
-BATCH_SIZE = 8
+BATCH_SIZE = 1
 
 for (channel_num, label_path) in generate_training_combination(channel_size, label_path_list):
     input_path = f'./ct_interpolated_{channel_num}.npy'
@@ -103,4 +115,9 @@ for (channel_num, label_path) in generate_training_combination(channel_size, lab
                                             save_best_only=True)
         earlystop_callback = EarlyStopping(monitor='loss', min_delta=1, patience=200)
         
-        model.fit(ds.batch(BATCH_SIZE), epochs=1000, callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback])
+        train_ds, val_ds, test_ds = split_ds(ds, 0.8, 0.1, 0.1)
+        
+        train_ds = train_ds.batch(BATCH_SIZE).cache().prefetch(tf.data.experimental.AUTOTUNE)
+        val_ds = val_ds.batch(BATCH_SIZE).cache().prefetch(tf.data.experimental.AUTOTUNE)
+        model.fit(train_ds, validation_data = val_ds, epochs=1000, callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback])
+        
