@@ -1,6 +1,8 @@
 # Tools import
 import glob
 import os
+from typing import Tuple
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 import tensorflow as tf
 import numpy as np
 from itertools import product
@@ -49,7 +51,9 @@ def build_cnn_model(input_shape):
     return model
 
 def build_ds_from(input_path, label_path):
+    print('Building dataset...')
     label = np.load(label_path)
+    print(len(label))
     data = np.load(input_path)
     data = np.expand_dims(data, -1)
     
@@ -58,24 +62,34 @@ def build_ds_from(input_path, label_path):
 def generate_training_combination(input_path_list, label_path_list):
     return product(input_path_list, label_path_list)
 
-def split_ds(ds, train_rate, val_rate, test_rate):
-    size = ds.cardinality().numpy()
-    train_size = int(train_rate * size)
-    val_size = int(val_rate * size)
-    test_size = int(test_rate * size)
-    
-    train_ds = ds.take(train_size)
-    test_ds = ds.skip(train_size)
-    val_ds = test_ds.skip(test_size)
-    test_ds = test_ds.take(test_size)
-    
-    return train_ds, val_ds, test_ds
+def batch_dataset(ds, batch_size=1):
+    return ds.batch(batch_size)
+
+def split_dataset(dataset: tf.data.Dataset, 
+                  dataset_size: int, 
+                  train_ratio: float, 
+                  validation_ratio: float, test_ratio:float) -> Tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
+    assert (train_ratio + validation_ratio) <= 1
+
+    train_count = int(dataset_size * train_ratio)
+    validation_count = int(dataset_size * validation_ratio)
+    test_count = dataset_size - (train_count + validation_count)
+
+    dataset = dataset.shuffle(dataset_size)
+
+    train_dataset = dataset.take(train_count)
+    validation_dataset = dataset.skip(train_count).take(validation_count)
+    test_dataset = dataset.skip(validation_count + train_count).take(test_count)
+
+    return batch_dataset(train_dataset), batch_dataset(validation_dataset), batch_dataset(test_dataset)
     
 # Data Access
 channel_size = [3, 5, 10, 15, 20, 30, 50, 70, 90]
 label_path_list = ['./avg_change.npy']
+dataset_size = 174
+
+# tf.debugging.set_log_device_placement(True)
 # Training parameter
-BATCH_SIZE = 1
 
 for (channel_num, label_path) in generate_training_combination(channel_size, label_path_list):
     input_path = f'./ct_interpolated_{channel_num}.npy'
@@ -96,8 +110,6 @@ for (channel_num, label_path) in generate_training_combination(channel_size, lab
     if os.path.exists(model_path):
         continue
     
-    tf.debugging.set_log_device_placement(True)
-    
     gpus = tf.config.list_logical_devices('GPU')
     strategy = tf.distribute.MirroredStrategy(gpus)
     with strategy.scope():
@@ -115,9 +127,7 @@ for (channel_num, label_path) in generate_training_combination(channel_size, lab
                                             save_best_only=True)
         earlystop_callback = EarlyStopping(monitor='loss', min_delta=1, patience=200)
         
-        train_ds, val_ds, test_ds = split_ds(ds, 0.8, 0.1, 0.1)
+        train_ds, val_ds, test_ds = split_dataset(ds, dataset_size, 0.8, 0.1, 0.1)
         
-        train_ds = train_ds.batch(BATCH_SIZE).cache().prefetch(tf.data.experimental.AUTOTUNE)
-        val_ds = val_ds.batch(BATCH_SIZE).cache().prefetch(tf.data.experimental.AUTOTUNE)
         model.fit(train_ds, validation_data = val_ds, epochs=1000, callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback])
         
