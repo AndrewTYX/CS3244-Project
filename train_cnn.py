@@ -110,24 +110,24 @@ for (channel_num, label_path) in generate_training_combination(channel_size, lab
     if os.path.exists(model_path):
         continue
     
-    gpus = tf.config.list_logical_devices('GPU')
-    strategy = tf.distribute.MirroredStrategy(gpus)
-    with strategy.scope():
+    # gpus = tf.config.list_logical_devices('GPU')
+    # strategy = tf.distribute.MirroredStrategy(gpus)
+    # with strategy.scope():
     # Build and compile model
-        model = build_cnn_model((input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
-        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
-                loss=tf.keras.losses.MeanSquaredError(),
-                metrics=[tf.keras.metrics.MeanSquaredError(),
-                        tf.keras.metrics.MeanAbsoluteError()])
-        
-        # Setup callbacks
-        csv_logger_callback = CSVLogger(f'./train_logs/{input_name}_{label_name}')
-        checkpoint_callback = ModelCheckpoint(filepath = f'./model_checkpoints/{input_name}_{label_name}', 
-                                            monitor='loss',
-                                            save_best_only=True)
-        earlystop_callback = EarlyStopping(monitor='loss', min_delta=1, patience=200)
-        
-        train_ds, val_ds, test_ds = split_dataset(ds, dataset_size, 0.8, 0.1, 0.1)
-        
-        model.fit(train_ds, validation_data = val_ds, epochs=1000, callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback])
-        
+    model = build_cnn_model((input_shape[0], input_shape[1], input_shape[2], input_shape[3]))
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
+            loss=tf.keras.losses.MeanSquaredError(),
+            metrics=[tf.keras.metrics.MeanSquaredError(),
+                    tf.keras.metrics.MeanAbsoluteError()])
+    
+    # Setup callbacks
+    csv_logger_callback = CSVLogger(f'./train_logs/{input_name}_{label_name}')
+    checkpoint_callback = ModelCheckpoint(filepath = f'./model_checkpoints/{input_name}_{label_name}', 
+                                        monitor='loss',
+                                        save_best_only=True)
+    earlystop_callback = EarlyStopping(monitor='loss', min_delta=1, patience=200)
+    
+    train_ds, val_ds, test_ds = split_dataset(ds, dataset_size, 0.8, 0.1, 0.1)
+    
+    model.fit(train_ds, validation_data = val_ds, epochs=1000, callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback])
+    
