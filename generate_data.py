@@ -96,6 +96,7 @@ def rotate(img3d):
   return np.array(rotated)
 
 def save_np_arr_with_channel(channel_num):
+    raw_arr_dir = {}
     patients_list = generate_patient_ids(ct_data_path)
     length = len(patients_list) - 2
     sample_ct_shape = rotate(spline_interpolated_zoom_select(rs_img(patients_list[0]), channel_num)).shape
@@ -105,5 +106,7 @@ def save_np_arr_with_channel(channel_num):
       if patient not in BAD_IDS:
         print(f'Processing patient: {patient}')
         pixel_arr_combined[index] = rotate(spline_interpolated_zoom_select(rs_img(patient), channel_num))
+        raw_arr_dir[patient] = rotate(spline_interpolated_zoom_select(rs_img(patient), channel_num))
         index = index + 1;
     np.save(f'./ct_interpolated_{channel_num}', pixel_arr_combined)
+    np.save(f'./ct_interpolated_{channel_num}_dir', raw_arr_dir)
