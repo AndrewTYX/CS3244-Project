@@ -14,9 +14,12 @@ from tensorflow.keras import Model
 # Call back import
 from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
 
-
-def build_cnn_layers(input_shape, feature_size):
-    input_layer = Input(input_shape)
+def build_input_layer(ct_input_shape, raw_input_shape):
+    ct_input = Input(ct_input_shape)
+    time_input = Input(raw_input_shape)
+    return ct_input, time_input
+    
+def build_cnn_layers(input_layer, feature_size):
     conv_layer1 = Conv3D(filters=64, kernel_size=(3, 3, 3), activation='relu', padding='same')(input_layer)
     pooling_layer1 = MaxPool3D(pool_size=(2, 2, 2), padding='same')(conv_layer1)
     pooling_layer1 = BatchNormalization()(pooling_layer1)  
@@ -67,7 +70,6 @@ def build_ct_ds(train_test_val_label, channel_size):
 # Zip the ds with labels
 
 # Concatenate raw input for timeseries and feature output layer from CNN
-
 # Train the model
 
 # Test the model
