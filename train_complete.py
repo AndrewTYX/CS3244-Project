@@ -52,17 +52,44 @@ def build_cnn_layers(input_layer, feature_size):
     
     return feature_layer
 
-def build_time_series_ds(train_test_val_label):
+def build_time_series_ds(dataset, patient_ids):
     '''
     Build ds for time series data
     '''
-    return train_ds, val_ds, test_ds
+    patients_dataset = dataset.loc[dataset['Patient'].isin(patient_ids)]
+    # Output a dataframe
+    return patients_dataset[['Patient', 'Weeks', 'FVC']]
 
-def build_ct_ds(train_test_val_label, channel_size):
+def build_baseline_ds(dataset, patient_ids):
+    '''
+    Build ds for baseline data
+    '''
+    patients_dataset = dataset.loc[dataset['Patient'].isin(patient_ids)]
+    # Output a dataframe
+    return patients_dataset[['Patient', 'Age', 'Sex', 'SmokingStatus']]
+
+def build_ct_ds(patient_ids, channel_num):
     '''
     Build ds for ct scan
     '''
-    return train_ds, val_ds, test_ds
+    input_path = f'./ct_interpolated_{channel_num}_dir.npy'
+    assert os.path.exists(input_path)
+
+    dataset_dir = np.load(input_path)
+    processed_imgs = list(map(lambda p: dataset_dir.item()[p], patient_ids))
+    patients_dataset = {'Patient': patient_ids, 'CTScan': processed_imgs}
+    return pd.DataFrame(patients_dataset)
+
+def build_ds(dataset, patient_ids, channel_num):
+    timeseries_ds = build_time_series_ds(dataset, patient_ids)
+    baseline_ds = build_baseline_ds(dataset, patient_ids)
+    build_ds(dataset, patient_ids, channel_num)
+
+    return
+
+
+
+
 
 
 # Build ds for time series and ct scan
