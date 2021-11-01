@@ -131,7 +131,7 @@ def build_ds(df_path, patient_ids, channel_num):
     baseline_ds = build_baseline_ds(time_series_df, patient_ids)
     ct_ds = build_ct_ds(time_series_df, ct_dir_path, patient_ids, channel_num)
     
-    label = tf.data.Dataset.from_tensor_slices(time_series_df)
+    label = build_label_ds(time_series_df)
     return tf.data.Dataset.zip((timeseries_ds, baseline_ds, ct_ds), label)
 
 
