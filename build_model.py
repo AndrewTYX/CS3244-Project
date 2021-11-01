@@ -64,7 +64,7 @@ def build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
                     nn_feature_size, ff_feature_size):
     '''
     ct shape should be (time_step)
-    '''`
+    '''
     ct_input, time_input, base_input = build_input_layer(ct_input_shape, raw_input_shape, base_input_shape)
     
     x1 = build_cnn_layers(ct_input_shape, nn_feature_size)(ct_input)
