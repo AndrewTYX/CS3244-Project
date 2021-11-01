@@ -108,5 +108,5 @@ def save_np_arr_with_channel(channel_num):
         pixel_arr_combined[index] = rotate(spline_interpolated_zoom_select(rs_img(patient), channel_num))
         raw_arr_dir[patient] = rotate(spline_interpolated_zoom_select(rs_img(patient), channel_num))
         index = index + 1;
-    np.save(f'./ct_interpolated_{channel_num}', pixel_arr_combined)
+    # np.save(f'./ct_interpolated_{channel_num}', pixel_arr_combined)
     np.save(f'./ct_interpolated_{channel_num}_dir', raw_arr_dir)

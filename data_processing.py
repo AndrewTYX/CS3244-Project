@@ -3,6 +3,7 @@ import numpy as np
 import os
 import random
 import tensorflow as tf
+from generate_data import save_np_arr_with_channel
 
 csv_path = './train.csv'
 BAD_IDS = {'ID00011637202177653955184', 'ID00052637202186188008618'}
@@ -51,7 +52,7 @@ def build_time_series_ds(df_path, patient_ids):
             index = index + 1
     return tf.data.Dataset.from_tensor_slices(arr)
 
-def generate_ID_count_map(time_series_df，patient_ids):
+def generate_ID_count_map(time_series_df, patient_ids):
     '''
     Genereate ID -> data instance count map for time series map
     For building corresponding 
@@ -76,10 +77,9 @@ def build_baseline_df(df_path, patient_ids):
     # Output a dataframe
     return patients_dataset[['Patient', 'Age', 'Sex', 'SmokingStatus']]
 
-def build_baseline_ds(df_path, patient_ids):
+def build_baseline_ds(time_series_df, patient_ids):
     sex_mapping = {'Male': 0, 'Female': 1}
     smoking_mapping = {'Ex-smoker':0, 'Never smoked':1, 'Currently smokes':2}
-    time_series_df = build_time_series_df(df_path, patient_ids)
     id_count = generate_ID_count_map(time_series_df, patient_ids)
     length = len(time_series_df)
     arr = np.empty((length, 3))
@@ -97,15 +97,12 @@ def build_baseline_ds(df_path, patient_ids):
     return tf.data.Dataset.from_tensor_slices(arr)
     
     
-def build_ct_ds(timeseries_df, patient_ids, channel_num):
-    '''
-    Build ds for ct scan
-    '''
+def build_ct_ds(timeseries_df, ct_dir_path, patient_ids, channel_num):
     print('[Data Preprocessing] Building ct scan dataset...')
     input_path = f'./ct_interpolated_{channel_num}_dir.npy'
     assert os.path.exists(input_path)
     
-    length = len(timeseries_df)
+    length = len(time_series_df)
     ct_dir = np.load(input_path)
     ct_shape = ct_dir.values()[0].shape
     id_count = generate_ID_count_map(time_series_df, patient_ids)
@@ -122,17 +119,26 @@ def build_ct_ds(timeseries_df, patient_ids, channel_num):
             
     return tf.data.Dataset.from_tensor_slices(arr)
 
-def build_ds(dataset, patient_ids, channel_num):
-    timeseries_ds = build_time_series_ds(dataset, patient_ids)
-    baseline_ds = build_baseline_ds(dataset, patient_ids)
-    build_ds(dataset, patient_ids, channel_num)
+def build_label_ds(time_series_df):
+    label = time_series_df['FVC'].to_numpy()
+    return tf.data.Dataset.from_tensor_slices(label)
     
-    return
+    
+def build_ds(df_path, patient_ids, channel_num):
+    time_series_df = build_time_series_df(df_path, patient_ids)
+    
+    timeseries_ds = build_time_series_ds(df_path, patient_ids)
+    baseline_ds = build_baseline_ds(time_series_df, patient_ids)
+    ct_ds = build_ct_ds(time_series_df, ct_dir_path, patient_ids, channel_num)
+    
+    label = tf.data.Dataset.from_tensor_slices(time_series_df)
+    return tf.data.Dataset.zip((timeseries_ds, baseline_ds, ct_ds), label)
 
 
-def build_training_ds(csv_file_path, ct_scan_path, channel_num):
+def build_training_ds(csv_file_path, ct_dir_path, channel_num):
     '''
     Top level call for building the dataset
     '''
     all_ids = get_ids(csv_file_path)
+    
     
