@@ -3,7 +3,7 @@ import numpy as np
 import os
 import random
 import tensorflow as tf
-from generate_data import save_np_arr_with_channel
+from generate_ct_data import save_np_arr_with_channel
 
 csv_path = './train.csv'
 BAD_IDS = {'ID00011637202177653955184', 'ID00052637202186188008618'}
