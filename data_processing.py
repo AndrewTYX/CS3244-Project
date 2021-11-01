@@ -67,15 +67,15 @@ def generate_ID_count_map(time_series_df, patient_ids):
     
     return res
 
-def build_baseline_df(df_path, patient_ids):
-    '''
-    Build ds for baseline data
-    '''
-    dataset = pd.read_csv(df_path)
-    print('[Data Preprocessing] Building baseline dataset...')
-    patients_dataset = dataset.loc[dataset['Patient'].isin(patient_ids)]
-    # Output a dataframe
-    return patients_dataset[['Patient', 'Age', 'Sex', 'SmokingStatus']]
+# def build_baseline_df(df_path, patient_ids):
+#     '''
+#     Build ds for baseline data
+#     '''
+#     dataset = pd.read_csv(df_path)
+#     print('[Data Preprocessing] Building baseline dataset...')
+#     patients_dataset = dataset.loc[dataset['Patient'].isin(patient_ids)]
+#     # Output a dataframe
+#     return patients_dataset[['Patient', 'Age', 'Sex', 'SmokingStatus']]
 
 def build_baseline_ds(time_series_df, patient_ids):
     sex_mapping = {'Male': 0, 'Female': 1}
