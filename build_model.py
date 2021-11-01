@@ -1,4 +1,4 @@
-from tensorflow.keras.layers import LSTM, Input, Conv3D, MaxPool3D, BatchNormalization, Flatten, Dense, Dropout, Concatenate
+from tensorflow.keras.layers import LSTM, Input, Conv3D, MaxPool3D, BatchNormalization, Flatten, Dense, Dropout, Concatenate, TimeDistributed
 from tensorflow.keras import Model
 from tensorflow.keras.models import Sequential
 
@@ -43,10 +43,10 @@ def build_cnn_layers(input_shape, feature_size):
     return model
 
 def build_ff_layers(input_shape, feature_size):
-    model = Sequencial()
-    model.add(Dense(units=16, activation='relu', input_shape = input_shape))
-    model.add(Dense(units=32, activation='relu'))
-    model.add(Dense(units=feature_size, activation='softmax'))
+    model = Sequential()
+    model.add(TimeDistributed(Dense(units=16, activation='relu', input_shape=input_shape)))
+    model.add(TimeDistributed(Dense(units=32, activation='relu')))
+    model.add(TimeDistributed(Dense(units=feature_size, activation='softmax')))
     return model
 
 def build_LSTM(nn_feature_size, ff_feature_size, time_feature_size):
@@ -70,7 +70,7 @@ def build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
     
     out = Concatenate()([x1, x2, x3])
     
-    out = build_LSTM(nn_feature_size, ff_feature_size, 2)
+    out = build_LSTM(nn_feature_size, ff_feature_size, 2)(out)
     
     model = Model([ct_input, time_input, base_input], out)
     
