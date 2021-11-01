@@ -70,7 +70,7 @@ def duplicate_with_timestep_length(arr, step, length):
     combined = np.array([])
     
     for k in range(0, length):
-        res = np.copy(arr)
+        res = np.expand_dims(arr, axis=0)
         for i in range(0, step):
             res = np.vstack((res, arr))
         if combiend.size = 0:
