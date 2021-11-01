@@ -65,14 +65,20 @@ def split_ids(id_list, train_ratio, test_ratio, val_ratio):
 def get_ct_for_patient(ct_dir, patient_id):
     return ct_dir[patient_id]
 
-def duplicate_with_timestep(arr, step):
+def duplicate_with_timestep_length(arr, step, length):
     # Using hstack to duplicate
-    res = np.copy(arr)
+    combined = np.array([])
     
-    for i in range(0, step):
-        res = np.hstack((res, arr))
-        
-    return res
+    for k in range(0, length):
+        res = np.copy(arr)
+        for i in range(0, step):
+            res = np.hstack((res, arr))
+        if combiend.size = 0:
+            combined = res
+        else:
+            combiend = np.concatenate((combined, res))
+    
+    return combined
 
 def get_baseline_for_patient(patient_df):
     labelencoder= LabelEncoder()
@@ -91,9 +97,10 @@ def create_seq(data, interp, steps, ct_dir):
   for ID in patient_ID:
     patient = data.loc[data['Patient'] == ID]
     if interp: patient = interpolate_FVC(patient)
-    p_x, p_y = construct_input(patient, ['FVC', 'Weeks', 'FVC'], steps)
-    ct_x = duplicate_with_timestep(get_ct_for_patient(ct_dir, ID), steps)
-    base_x = duplicate_with_timestep(get_baseline_for_patient(patient))
+    p_x, p_y = construct_timeseries_input(patient, ['FVC', 'Weeks', 'FVC'], steps)
+    length = len(p_x)
+    ct_x = duplicate_with_timestep_length(get_ct_for_patient(ct_dir, ID), steps, length)
+    base_x = duplicate_with_timestep_length(get_baseline_for_patient(patient), steps, length)
     
     if X_input.size == 0:
       time_series_in = p_x
