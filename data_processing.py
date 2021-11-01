@@ -1,35 +1,94 @@
 import pandas as pd
 import numpy as np
 import os
+import random
+import tensorflow as tf
 
 csv_path = './train.csv'
+BAD_IDS = {'ID00011637202177653955184', 'ID00052637202186188008618'}
+
+def get_ids(df_path):
+    df = pd.read_csv(df_path)
+    patient_id = df.Patient.unique()
+    return patient_id.tolist()
+
+def split_ids(id_list, train_ratio, test_ratio, val_ratio):
+    print('[Data Preprocessing] Spliting IDs into train test validation set')
+    size = len(id_list)
+    
+    train_size = int(size * train_ratio)
+    test_size = int(size * test_ratio)
+    val_size = int(size * val_ratio)
+    
+    random.shuffle(id_list)
+    train_ids = id_list[:train_size]
+    test_ids = id_list[train_size + 1: train_size + test_size]
+    val_ids = id_list[train_size + test_size + 1:]
+        
+    return train_ids, test_ids, val_ids ;
 
 def build_time_series_df(df_path, patient_ids):
     '''
     Build ds for time series data
     '''
+    print('[Data Preprocessing] Building time series dataset...')
     dataset = pd.read_csv(df_path)
     patients_dataset = dataset.loc[dataset['Patient'].isin(patient_ids)]
     # Output a dataframe
     return patients_dataset[['Patient', 'Weeks', 'FVC']]
 
-def generate_ID_count_map(time_series_data):
+def build_time_series_ds(df_path, patient_ids):
+    df = build_time_series_df(df_path, patient_ids)
+    arr = []
+    for patient in patient_ids:
+        patient_df = df[df['Patient'] == patient]
+        temp_arr = patient_df[['Weeks', 'FVC']].to_numpy()
+        arr.append(temp_arr)
+    return tf.data.Dataset.from_tensor_slices(arr)
+
+def generate_ID_count_map(time_series_df，patient_ids):
     '''
     Genereate ID -> data instance count map for time series map
     For building corresponding 
+    
+    Return a list for order consistent with patient ids
+    res[0] is the count for patient_ids[0]
     '''
-    return ;
+    res = []
+    value_count_frame = time_series_df.Patient.value_counts()
+    for patient in patient_ids:
+        res += value_count_frame[patient]
+    
+    return res
 
 def build_baseline_df(df_path, patient_ids):
     '''
     Build ds for baseline data
     '''
-    dataset = dataset = pd.read_csv(df_path)
+    dataset = pd.read_csv(df_path)
     print('[Data Preprocessing] Building baseline dataset...')
     patients_dataset = dataset.loc[dataset['Patient'].isin(patient_ids)]
     # Output a dataframe
     return patients_dataset[['Patient', 'Age', 'Sex', 'SmokingStatus']]
 
+def build_baseline_ds(df_path, patient_ids):
+    sex_mapping = {'Male': 0, 'Female': 1}
+    smoking_mapping = {'Ex-smoker':0, 'Never smoked':1, 'Currently smokes':2}
+    time_series_df = build_time_series_df(df_path, patient_ids)
+    id_count = generate_ID_count_map(time_series_df, patient_ids)
+    arr = []
+    for i in range(0, len(patient_ids)):
+        repeat = id_count[i]
+        curr_id = patient_ids[i]
+        curr_df = time_series_df[time_series_df['Patient'] == curr_id]
+        temp_arr = curr_df.loc[0][['Age', 'Sex', 'SmokingStatus']].to_numpy()
+        temp_arr = [temp_arr[0], sex_mapping[temp_arr[1]], smoking_mapping[temp_arr[2]]]
+        
+        for j in range(0, repeat):
+            arr.append(temp_arr)
+    return tf.data.Dataset.from_tensor_slices(arr)
+    
+    
 def build_ct_ds(timeseries_df, patient_ids, channel_num):
     '''
     Build ds for ct scan
@@ -37,11 +96,19 @@ def build_ct_ds(timeseries_df, patient_ids, channel_num):
     print('[Data Preprocessing] Building ct scan dataset...')
     input_path = f'./ct_interpolated_{channel_num}_dir.npy'
     assert os.path.exists(input_path)
-
-    dataset_dir = np.load(input_path)
-    processed_imgs = list(map(lambda p: dataset_dir.item()[p], patient_ids))
-    patients_dataset = {'Patient': patient_ids, 'CTScan': processed_imgs}
-    return pd.DataFrame(patients_dataset)
+    
+    ct_dir = np.load(input_path)
+    id_count = generate_ID_count_map(time_series_df, patient_ids)
+    arr = []
+    
+    for i in range(0, len(patient_ids)):
+        repeat = id_count[i]
+        curr_id = patient_ids[i]
+        
+        for i in range(0, repeat):
+            arr.append(ct_dir[curr_id])
+            
+    return tf.data.Dataset.from_tensor_slices(arr)
 
 def build_ds(dataset, patient_ids, channel_num):
     timeseries_ds = build_time_series_ds(dataset, patient_ids)
@@ -50,3 +117,10 @@ def build_ds(dataset, patient_ids, channel_num):
     
     return
 
+
+def build_training_ds(csv_file_path, ct_scan_path, channel_num):
+    '''
+    Top level call for building the dataset
+    '''
+    all_ids = get_ids(csv_file_path)
+    
