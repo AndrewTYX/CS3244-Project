@@ -118,8 +118,10 @@ def create_seq(data, interp, steps, ct_dir):
 def build_ds(df_path, ct_dir_path, patient_ids, timestep):
     #select data to fit the set
     data = dataset.loc[dataset['Patient'].isin(patient_ids)]
+    if not os.path.exists(ct_dir_path):
+      print('CT dictionary not exists, craeting one...')
+      save_np_arr_with_channel(3)
     ct_dir = np.load(ct_dir_path)
-    
     timeseries_ds, baseline_ds, ct_ds, label = create_seq(data, True, time_step, ct_dir)
     return tf.data.Dataset.zip((timeseries_ds, baseline_ds, ct_ds), label)
 

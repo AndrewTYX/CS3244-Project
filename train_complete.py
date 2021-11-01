@@ -14,19 +14,21 @@ from tensorflow.keras import Model
 # Call back import
 from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
 from build_model import build_full_lstm
+from data_processing import build_ds_with_split
 
 timestep = 2
+channel_num = 3
 ct_input_shape = (timestep,512, 512, 3, 1)
 raw_input_shape = (timestep, 2)
 base_input_shape = (timestep,4)
+csv_file_path = './train.csv'
+ct_dir_path = './ct_interpolated_{channel_num}_dir.npy'
 
 nn_feature_size = 10
 ff_feature_size = 10
-# Build ds for time series and ct scan
 
-# Zip the ds with labels
+train_ds, test_ds, val_ds = build_ds_with_split(csv_file_path, ct_dir_path, timestep)
 
-# Concatenate raw input for timeseries and feature output layer from CNN
-# Train the model
+model = build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
+                    nn_feature_size, ff_feature_size)
 
-# Test the model
