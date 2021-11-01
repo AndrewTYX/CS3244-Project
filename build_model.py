@@ -1,19 +1,3 @@
-# Tools import
-import glob
-import os
-from typing import Tuple
-import tensorflow as tf
-import numpy as np
-from itertools import product
-from generate_data import save_np_arr_with_channel
-
-# Layers and Models import
-from tensorflow.keras.layers import Input, Conv3D, MaxPool3D, BatchNormalization, Flatten, Dense, Dropout
-from tensorflow.keras import Model
-
-# Call back import
-from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
-
 def build_input_layer(ct_input_shape, raw_input_shape):
     ct_input = Input(ct_input_shape)
     time_input = Input(raw_input_shape)
@@ -51,12 +35,3 @@ def build_cnn_layers(input_layer, feature_size):
     feature_layer = Dense(units=feature_size, activation='relu')(dense_layer4)
     
     return feature_layer
-
-# Build ds for time series and ct scan
-
-# Zip the ds with labels
-
-# Concatenate raw input for timeseries and feature output layer from CNN
-# Train the model
-
-# Test the model
