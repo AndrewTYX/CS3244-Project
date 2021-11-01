@@ -135,10 +135,16 @@ def build_ds(df_path, patient_ids, channel_num):
     return tf.data.Dataset.zip((timeseries_ds, baseline_ds, ct_ds), label)
 
 
-def build_training_ds(csv_file_path, ct_dir_path, channel_num):
+def build_ds_with_split(csv_file_path, ct_dir_path, channel_num):
     '''
     Top level call for building the dataset
     '''
     all_ids = get_ids(csv_file_path)
+    train_ids, test_ids, val_ids = split_ids(all_ids, 0.8, 0.1, 0.1)
+    train_ds = build_ds(csv_file_path, train_ids, channel_num)
+    test_ds = build_ds(csv_file_path, test_ids, channel_num)
+    val_ds = build_ds(csv_file_path, val_ids, channel_num)
+    
+    return train_ds, test_ds, val_ds
     
     
