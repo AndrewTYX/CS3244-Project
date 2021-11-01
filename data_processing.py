@@ -39,11 +39,16 @@ def build_time_series_df(df_path, patient_ids):
 
 def build_time_series_ds(df_path, patient_ids):
     df = build_time_series_df(df_path, patient_ids)
-    arr = []
+    length = len(df)
+    arr = np.empty((length, 2))
+    index = 0
     for patient in patient_ids:
         patient_df = df[df['Patient'] == patient]
         temp_arr = patient_df[['Weeks', 'FVC']].to_numpy()
-        arr.append(temp_arr)
+        
+        for i in range(0, len(temp_arr)):
+            arr[index] = temp_arr[i]
+            index = index + 1
     return tf.data.Dataset.from_tensor_slices(arr)
 
 def generate_ID_count_map(time_series_df，patient_ids):
@@ -76,7 +81,9 @@ def build_baseline_ds(df_path, patient_ids):
     smoking_mapping = {'Ex-smoker':0, 'Never smoked':1, 'Currently smokes':2}
     time_series_df = build_time_series_df(df_path, patient_ids)
     id_count = generate_ID_count_map(time_series_df, patient_ids)
-    arr = []
+    length = len(time_series_df)
+    arr = np.empty((length, 3))
+    index = 0
     for i in range(0, len(patient_ids)):
         repeat = id_count[i]
         curr_id = patient_ids[i]
@@ -85,7 +92,8 @@ def build_baseline_ds(df_path, patient_ids):
         temp_arr = [temp_arr[0], sex_mapping[temp_arr[1]], smoking_mapping[temp_arr[2]]]
         
         for j in range(0, repeat):
-            arr.append(temp_arr)
+            arr[index] = temp_arr
+            index = index + 1
     return tf.data.Dataset.from_tensor_slices(arr)
     
     
@@ -97,16 +105,20 @@ def build_ct_ds(timeseries_df, patient_ids, channel_num):
     input_path = f'./ct_interpolated_{channel_num}_dir.npy'
     assert os.path.exists(input_path)
     
+    length = len(timeseries_df)
     ct_dir = np.load(input_path)
+    ct_shape = ct_dir.values()[0].shape
     id_count = generate_ID_count_map(time_series_df, patient_ids)
-    arr = []
+    arr = np.empty((length, ct_shape[0], ct_shape[1], ct_shape[2]))
+    index = 0
     
     for i in range(0, len(patient_ids)):
         repeat = id_count[i]
         curr_id = patient_ids[i]
         
         for i in range(0, repeat):
-            arr.append(ct_dir[curr_id])
+            arr[index] = ct_dir[curr_id]
+            index = index + 1
             
     return tf.data.Dataset.from_tensor_slices(arr)
 
