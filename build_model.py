@@ -13,35 +13,35 @@ def build_input_layer(raw_input_shape,ct_input_shape=None, base_input_shape=None
 
     return Input(raw_input_shape), Input(ct_input_shape), Input(base_input_shape)
     
-def build_cnn_layers(feature_size):
+def build_cnn_layers(feature_size, kernel_size, pool_size, dropout):
     model = Sequential()
-    model.add(TimeDistributed(Conv3D(filters=64, kernel_size=(3, 3, 3), activation='relu', padding='same')))
-    model.add(TimeDistributed(MaxPool3D(pool_size=(2, 2, 2), padding='same')))
+    model.add(TimeDistributed(Conv3D(filters=64, kernel_size=(kernel_size, kernel_size, kernel_size), activation='relu', padding='same')))
+    model.add(TimeDistributed(MaxPool3D(pool_size=(pool_size, pool_size, pool_size), padding='same')))
     model.add(TimeDistributed(BatchNormalization()))
-    model.add(TimeDistributed(Conv3D(filters=64, kernel_size=(3, 3, 3), activation='relu', padding='same')))
-    model.add(TimeDistributed(MaxPool3D(pool_size=(2, 2, 2), padding='same')))
+    model.add(TimeDistributed(Conv3D(filters=64, kernel_size=(kernel_size, kernel_size, kernel_size), activation='relu', padding='same')))
+    model.add(TimeDistributed(MaxPool3D(pool_size=(kernel_size, kernel_size, kernel_size), padding='same')))
     model.add(TimeDistributed(BatchNormalization()))
-    model.add(TimeDistributed(Conv3D(filters=64, kernel_size=(3, 3, 3), activation='relu', padding='same')))
-    model.add(TimeDistributed(MaxPool3D(pool_size=(2, 2, 2), padding='same')))
+    model.add(TimeDistributed(Conv3D(filters=64, kernel_size=(kernel_size, kernel_size, kernel_size), activation='relu', padding='same')))
+    model.add(TimeDistributed(MaxPool3D(pool_size=(pool_size, pool_size, pool_size), padding='same')))
     model.add(TimeDistributed(BatchNormalization()))
-    model.add(TimeDistributed(Conv3D(filters=128, kernel_size=(3, 3, 3), activation='relu', padding='same')))
-    model.add(TimeDistributed(MaxPool3D(pool_size=(2, 2, 2), padding='same')))
+    model.add(TimeDistributed(Conv3D(filters=128, kernel_size=(kernel_size, kernel_size, kernel_size), activation='relu', padding='same')))
+    model.add(TimeDistributed(MaxPool3D(pool_size=(pool_size, pool_size, pool_size), padding='same')))
     model.add(TimeDistributed(BatchNormalization()))
-    model.add(TimeDistributed(Conv3D(filters=256, kernel_size=(3, 3, 3), activation='relu', padding='same')))
-    model.add(TimeDistributed(MaxPool3D(pool_size=(2, 2, 2), padding='same')))
-    model.add(TimeDistributed(Conv3D(filters=128, kernel_size=(3, 3, 3), activation='relu', padding='same')))
-    model.add(TimeDistributed(MaxPool3D(pool_size=(2, 2, 2), padding='same')))
-    model.add(TimeDistributed(Conv3D(filters=32, kernel_size=(3, 3, 3), activation='relu', padding='same')))
-    model.add(TimeDistributed(MaxPool3D(pool_size=(2, 2, 2), padding='same')))
+    model.add(TimeDistributed(Conv3D(filters=256, kernel_size=(kernel_size, kernel_size, kernel_size), activation='relu', padding='same')))
+    model.add(TimeDistributed(MaxPool3D(pool_size=(pool_size, pool_size, pool_size), padding='same')))
+    model.add(TimeDistributed(Conv3D(filters=128, kernel_size=(kernel_size, kernel_size, kernel_size), activation='relu', padding='same')))
+    model.add(TimeDistributed(MaxPool3D(pool_size=(pool_size, pool_size, pool_size), padding='same')))
+    model.add(TimeDistributed(Conv3D(filters=32, kernel_size=(kernel_size, kernel_size, kernel_size), activation='relu', padding='same')))
+    model.add(TimeDistributed(MaxPool3D(pool_size=(pool_size, pool_size, pool_size), padding='same')))
     
     model.add(TimeDistributed(BatchNormalization()))
     model.add(TimeDistributed(Flatten()))
     
     model.add(TimeDistributed(Dense(units=512, activation='relu')))
-    model.add(TimeDistributed(Dropout(0.4)))
+    model.add(TimeDistributed(Dropout(dropout)))
 
     model.add(TimeDistributed(Dense(units=256, activation='relu')))
-    model.add(TimeDistributed(Dropout(0.4)))
+    model.add(TimeDistributed(Dropout(dropout)))
   
     model.add(TimeDistributed(Dense(units=feature_size, activation='relu')))
     
@@ -54,54 +54,54 @@ def build_ff_layers(feature_size):
     model.add(TimeDistributed(Dense(units=feature_size, activation='softmax')))
     return model
 
-def build_LSTM(time_feature_size, nn_feature_size=0, ff_feature_size=0):
+def build_LSTM(time_feature_size, unit, nn_feature_size=0, ff_feature_size=0):
     assert nn_feature_size != 0 or ff_feature_size != 0
     n_features = nn_feature_size + ff_feature_size + time_feature_size
     n_steps = 2
     
     model = Sequential()
-    model.add(LSTM(50, activation='relu', return_sequences = True, input_shape=(n_steps, n_features)))
-    model.add(LSTM(50, activation = 'relu'))
+    model.add(LSTM(unit, activation='relu', return_sequences = True, input_shape=(n_steps, n_features)))
+    model.add(LSTM(unit, activation = 'relu'))
     model.add(Dense(1))
     
     return model
     
 def build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
-                    nn_feature_size, ff_feature_size):
+                    nn_feature_size, ff_feature_size, cnn_kernel_size=3, cnn_pool_size=2, cnn_drop_out=0.4, lstm_unit=50):
     '''
     ct shape should be (time_step)
     '''
     time_input, ct_input, base_input = build_input_layer(raw_input_shape=raw_input_shape, ct_input_shape=ct_input_shape, base_input_shape=base_input_shape)
     
-    x1 = build_cnn_layers(ct_input_shape, nn_feature_size)(ct_input)
+    x1 = build_cnn_layers(nn_feature_size, cnn_kernel_size, cnn_pool_size, cnn_drop_out)(ct_input)
     x2 = time_input
     x3 = build_ff_layers(base_input_shape, ff_feature_size)(base_input)
     
     out = Concatenate()([x1, x2, x3])
     
-    out = build_LSTM(time_feature_size = 2, nn_feature_size = nn_feature_size, ff_feature_size = ff_feature_size)(out)
+    out = build_LSTM(time_feature_size = 2, nn_feature_size = nn_feature_size, ff_feature_size = ff_feature_size, unit=lstm_unit)(out)
     
     model = Model([ct_input, time_input, base_input], out)
     
     return model
     
     
-def build_ct_lstm(ct_input_shape, raw_input_shape, nn_feature_size):
+def build_ct_lstm(ct_input_shape, raw_input_shape, nn_feature_size, cnn_kernel_size=3, cnn_pool_size=2, cnn_drop_out=0.4, lstm_unit=50):
     time_input, ct_input = build_input_layer(raw_input_shape=raw_input_shape, ct_input_shape=ct_input_shape)
     
-    x1 = build_cnn_layers(ct_input_shape, nn_feature_size)(ct_input)
+    x1 = build_cnn_layers(nn_feature_size, cnn_kernel_size, cnn_pool_size, cnn_drop_out)(ct_input)
     x2 = time_input
 
     out = Concatenate()([x1, x2])
 
-    out = build_LSTM(time_feature_size=2, nn_feature_size=nn_feature_size)
+    out = build_LSTM(time_feature_size=2, nn_feature_size=nn_feature_size, unit=lstm_unit)
 
     model = Model([ct_input, time_input], out)
 
     return model
 
 
-def build_base_lstm(base_input_shape, raw_input_shape, ff_feature_size):
+def build_base_lstm(base_input_shape, raw_input_shape, ff_feature_size, lstm_unit=50):
     time_input, base_input = build_input_layer(raw_input_shape=raw_input_shape, base_input_shape=base_input_shape)
     
     x1 = build_ff_layers(base_input_shape, ff_feature_size)(base_input)
@@ -109,7 +109,7 @@ def build_base_lstm(base_input_shape, raw_input_shape, ff_feature_size):
 
     out = Concatenate()([x1, x2])
 
-    out = build_LSTM(time_feature_size=2, nn_feature_size=ff_feature_size)
+    out = build_LSTM(time_feature_size=2, nn_feature_size=ff_feature_size, unit=lstm_unit)
 
     model = Model([base_input, time_input], out)
 
