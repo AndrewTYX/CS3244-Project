@@ -2,11 +2,16 @@ from tensorflow.keras.layers import LSTM, Input, Conv3D, MaxPool3D, BatchNormali
 from tensorflow.keras import Model
 from tensorflow.keras.models import Sequential
 
-def build_input_layer(ct_input_shape, raw_input_shape, base_input_shape):
-    ct_input = Input(ct_input_shape)
-    time_input = Input(raw_input_shape)
-    base_input = Input(base_input_shape)
-    return ct_input, time_input, base_input
+def build_input_layer(raw_input_shape,ct_input_shape=None, base_input_shape=None):
+    assert ct_input_shape != None or base_input_shape != None
+
+    if ct_input_shape == None:
+        return Input(raw_input_shape), Input(base_input_shape)
+    
+    if base_input_shape == None:
+        return Input(raw_input_shape), Input(ct_input_shape)
+
+    return Input(raw_input_shape), Input(ct_input_shape), Input(base_input_shape)
     
 def build_cnn_layers(feature_size):
     model = Sequential()
@@ -49,7 +54,8 @@ def build_ff_layers(feature_size):
     model.add(TimeDistributed(Dense(units=feature_size, activation='softmax')))
     return model
 
-def build_LSTM(nn_feature_size, ff_feature_size, time_feature_size):
+def build_LSTM(time_feature_size, nn_feature_size=0, ff_feature_size=0):
+    assert nn_feature_size != 0 or ff_feature_size != 0
     n_features = nn_feature_size + ff_feature_size + time_feature_size
     n_steps = 2
     
@@ -65,7 +71,7 @@ def build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
     '''
     ct shape should be (time_step)
     '''
-    ct_input, time_input, base_input = build_input_layer(ct_input_shape, raw_input_shape, base_input_shape)
+    time_input, ct_input, base_input = build_input_layer(raw_input_shape=raw_input_shape, ct_input_shape=ct_input_shape, base_input_shape=base_input_shape)
     
     x1 = build_cnn_layers(ct_input_shape, nn_feature_size)(ct_input)
     x2 = time_input
@@ -73,14 +79,40 @@ def build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
     
     out = Concatenate()([x1, x2, x3])
     
-    out = build_LSTM(nn_feature_size, ff_feature_size, 2)(out)
+    out = build_LSTM(time_feature_size = 2, nn_feature_size = nn_feature_size, ff_feature_size = ff_feature_size)(out)
     
     model = Model([ct_input, time_input, base_input], out)
     
     return model
     
     
+def build_ct_lstm(ct_input_shape, raw_input_shape, nn_feature_size):
+    time_input, ct_input = build_input_layer(raw_input_shape=raw_input_shape, ct_input_shape=ct_input_shape)
     
+    x1 = build_cnn_layers(ct_input_shape, nn_feature_size)(ct_input)
+    x2 = time_input
+
+    out = Concatenate()([x1, x2])
+
+    out = build_LSTM(time_feature_size=2, nn_feature_size=nn_feature_size)
+
+    model = Model([ct_input, time_input], out)
+
+    return model
+
+
+def build_base_lstm(base_input_shape, raw_input_shape, ff_feature_size):
+    time_input, base_input = build_input_layer(raw_input_shape=raw_input_shape, base_input_shape=base_input_shape)
     
-    
+    x1 = build_ff_layers(base_input_shape, ff_feature_size)(base_input)
+    x2 = time_input
+
+    out = Concatenate()([x1, x2])
+
+    out = build_LSTM(time_feature_size=2, nn_feature_size=ff_feature_size)
+
+    model = Model([base_input, time_input], out)
+
+    return model
+
     
