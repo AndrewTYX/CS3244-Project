@@ -42,21 +42,49 @@ HP_FF_FEATURES_SIZE = hp.HParam('ff_feature_size', hp.Discrete([10, 20, 30]))
 
 METRIC_LOSS = 'loss'
 
+with tf.summary.create_file_writer('logs/hparam_tuning').as_default():
+  hp.hparams_config(
+    hparams=[HP_TIME_STEP, HP_CHANNEL_NUM, HP_KERNEL_SIZE, HP_POOL_SIZE, HP_DROP_RATE, 
+    HP_LSTM_UNIT, HP_NN_FEATURES_SIZE, HP_FF_FEATURES_SIZE],
+    metrics=[hp.Metric(METRIC_LOSS, display_name='loss')],
+  )
 
+def generate_hparams_list():
+    '''
+    Generate the hparams dictionary list for training sessions
+    '''
+    res = []
+    for ele in product(HP_TIME_STEP.domain.values, HP_CHANNEL_NUM.domain.values,
+        HP_KERNEL_SIZE.domain.values, HP_POOL_SIZE.domain.values, HP_DROP_RATE.domain.values, 
+        HP_LSTM_UNIT.domain.values, HP_NN_FEATURES_SIZE.domain.values, HP_FF_FEATURES_SIZE.domain.values):
+        
+        hparams = {
+            HP_TIME_STEP: ele[0],
+            HP_CHANNEL_NUM: ele[1],
+            HP_KERNEL_SIZE:ele[2],
+            HP_POOL_SIZE:ele[3],
+            HP_DROP_RATE:ele[4],
+            HP_LSTM_UNIT:ele[5],
+            HP_NN_FEATURES_SIZE:ele[6],
+            HP_FF_FEATURES_SIZE:ele[7]
+        }
+
+        res.append(hparams)
+    return res
 
 def generate_model_name(nn_feature_size, ff_feature_size, timestep, channel_num):
     return f'{nn_feature_size}_{ff_feature_size}_{timestep}_{channel_num}_model'
 
 
 def train_test_model(hparams):
-    timestep = hparams['timestep']
-    channel_num = hparams['channel_num']
-    cnn_kernel_size = hparams['cnn_kernel_size']
-    cnn_pool_size = hparams['cnn_pool_size']
-    cnn_drop_rate = hparams['cnn_drop_rate']
-    lstm_unit = hparams['timestep']
-    nn_feature_size = hparams['nn_feature_size']
-    ff_feature_size = hparams['ff_feature_size']
+    timestep = hparams[HP_TIME_STEP]
+    channel_num = hparams[HP_CHANNEL_NUM]
+    cnn_kernel_size = hparams[HP_KERNEL_SIZE]
+    cnn_pool_size = hparams[HP_POOL_SIZE]
+    cnn_drop_rate = hparams[HP_DROP_RATE]
+    lstm_unit = hparams[HP_LSTM_UNIT]
+    nn_feature_size = hparams[HP_NN_FEATURES_SIZE]
+    ff_feature_size = hparams[HP_FF_FEATURES_SIZE]
     ct_input_shape = (timestep,512, 512, 3, 1)
     raw_input_shape = (timestep, 2)
     base_input_shape = (timestep,4)
@@ -103,3 +131,20 @@ def train_test_model(hparams):
 
     model.fit(train_ds, validation_data = val_ds, epochs=1000, 
         callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback, board_metric_callback, hp_callback])
+
+    _, loss = model.evaluate(test_ds)
+
+    print('Current loss = %d' % loss)
+
+    return loss
+
+session_num = 0
+
+hparams_list = generate_hparams_list()
+
+for params in hparams_list:
+    run_name = "run-%d" % session_num
+    print('--- Starting trial：%s' % run_name)
+    print({h.name: params[h] for h in params})
+    test_loss = train_test_model(params)
+    session_num += 1
