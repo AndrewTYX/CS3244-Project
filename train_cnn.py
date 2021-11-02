@@ -5,7 +5,7 @@ from typing import Tuple
 import tensorflow as tf
 import numpy as np
 from itertools import product
-from generate_data import save_np_arr_with_channel
+from generate_ct_data import save_np_arr_with_channel
 
 # Layers and Models import
 from tensorflow.keras.layers import Input, Conv3D, MaxPool3D, BatchNormalization, Flatten, Dense, Dropout
