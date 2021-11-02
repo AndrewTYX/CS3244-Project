@@ -119,25 +119,32 @@ def create_seq(data, interp, steps, ct_dir):
   return tf.data.Dataset.from_tensor_slices(time_series_in),tf.data.Dataset.from_tensor_slices(ct_in), tf.data.Dataset.from_tensor_slices(baseline_in), tf.data.Dataset.from_tensor_slices(y_input)
     
     
-def build_ds(df_path, ct_dir_path, patient_ids, timestep):
+def build_ds(df_path, ct_dir_path, patient_ids, timestep, mode='full'):
     #select data to fit the set
     dataset = pd.read_csv(df_path)
     data = dataset.loc[dataset['Patient'].isin(patient_ids)]
     ct_dir = np.load(ct_dir_path)
     timeseries_ds, baseline_ds, ct_ds, label = create_seq(data, True, timestep, ct_dir)
-    return tf.data.Dataset.zip((timeseries_ds, baseline_ds, ct_ds), label)
 
+    if mode == 'full':
+      return tf.data.Dataset.zip((ct_ds, timeseries_ds ,baseline_ds), label)
+    elif mode == 'ct':
+      return tf.data.Dataset.zip((ct_ds, timeseries_ds), label)
+    else:
+      return tf.data.Dataset.zip((baseline_ds, timeseries_ds), label)
 
-def build_ds_with_split(csv_file_path, ct_dir_path, timestep):
+def build_ds_with_split(csv_file_path, ct_dir_path, timestep, mode='full'):
     '''
     Top level call for building the dataset
+
+    mode: The model mode, which can be 'ct' or 'base'
+    Using 'ct' for cnn + lstm
+    Using 'base' for feed forward network + lstm
     '''
     all_ids = get_ids(csv_file_path)
     train_ids, test_ids, val_ids = split_ids(all_ids, 0.8, 0.1, 0.1)
-    train_ds = build_ds(csv_file_path, ct_dir_path, train_ids,  timestep)
-    test_ds = build_ds(csv_file_path, ct_dir_path, test_ids,  timestep)
-    val_ds = build_ds(csv_file_path, ct_dir_path, val_ids,  timestep)
+    train_ds = build_ds(csv_file_path, ct_dir_path, train_ids,  timestep, mode)
+    test_ds = build_ds(csv_file_path, ct_dir_path, test_ids,  timestep, mode)
+    val_ds = build_ds(csv_file_path, ct_dir_path, val_ids,  timestep, mode)
     
     return train_ds, test_ds, val_ds
-    
-    
