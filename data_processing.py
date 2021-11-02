@@ -1,3 +1,5 @@
+from datetime import time
+from numpy.lib.function_base import _parse_input_dimensions
 import pandas as pd
 import numpy as np
 import os
@@ -5,13 +7,14 @@ import random
 import tensorflow as tf
 from generate_ct_data import save_np_arr_with_channel
 from sklearn.preprocessing import LabelEncoder 
+from scipy import interpolate
 
 csv_path = './train.csv'
 BAD_IDS = {'ID00011637202177653955184', 'ID00052637202186188008618'}
 
 def interpolate_FVC(patient_df):
-    time = np.array(dataset['Weeks'])
-    value = np.array(dataset['FVC'])
+    time = np.array(patient_df['Weeks'])
+    value = np.array(patient_df['FVC'])
     flinear = interpolate.interp1d(time, value, kind = 'slinear')
     #fqua = interpolate.interp1d(time, value, kind = 'quadratic')
 
@@ -24,7 +27,7 @@ def interpolate_FVC(patient_df):
 def construct_timeseries_input(patient_data, features, steps):
   input_seqs = []
   for feature in features:
-    seq = data[feature]
+    seq = patient_data[feature]
     seq = np.array(seq)
     seq = seq.reshape(len(seq), 1)
     input_seqs.append(seq)
@@ -48,6 +51,7 @@ def get_ids(df_path):
     return patient_id.tolist()
 
 def split_ids(id_list, train_ratio, test_ratio, val_ratio):
+    assert train_ratio + test_ratio + val_ratio <= 1
     print('[Data Preprocessing] Spliting IDs into train test validation set')
     size = len(id_list)
     
@@ -73,7 +77,7 @@ def duplicate_with_timestep_length(arr, step, length):
         res = np.expand_dims(arr, axis=0)
         for i in range(0, step):
             res = np.vstack((res, arr))
-        if combiend.size = 0:
+        if combiend.size == 0:
             combined = res
         else:
             combiend = np.concatenate((combined, res))
@@ -102,7 +106,7 @@ def create_seq(data, interp, steps, ct_dir):
     ct_x = duplicate_with_timestep_length(get_ct_for_patient(ct_dir, ID), steps, length)
     base_x = duplicate_with_timestep_length(get_baseline_for_patient(patient), steps, length)
     
-    if X_input.size == 0:
+    if time_series_in.size == 0:
       time_series_in = p_x
       y_input = p_y
       ct_in = ct_x
@@ -117,12 +121,13 @@ def create_seq(data, interp, steps, ct_dir):
     
 def build_ds(df_path, ct_dir_path, patient_ids, timestep):
     #select data to fit the set
+    dataset = pd.read_csv(df_path)
     data = dataset.loc[dataset['Patient'].isin(patient_ids)]
     if not os.path.exists(ct_dir_path):
       print('CT dictionary not exists, craeting one...')
       save_np_arr_with_channel(3)
     ct_dir = np.load(ct_dir_path)
-    timeseries_ds, baseline_ds, ct_ds, label = create_seq(data, True, time_step, ct_dir)
+    timeseries_ds, baseline_ds, ct_ds, label = create_seq(data, True, timestep, ct_dir)
     return tf.data.Dataset.zip((timeseries_ds, baseline_ds, ct_ds), label)
 
 
