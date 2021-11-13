@@ -99,6 +99,8 @@ def create_seq(data, interp, steps, ct_dir):
   ct_in = np.array([])
   y_input = np.array([])
   for ID in patient_ID:
+    if ID in BAD_IDS:
+          continue
     patient = data.loc[data['Patient'] == ID]
     if interp: patient = interpolate_FVC(patient)
     p_x, p_y = construct_timeseries_input(patient, ['FVC', 'Weeks', 'FVC'], steps)

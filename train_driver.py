@@ -31,8 +31,8 @@ from tensorboard.plugins.hparams import api as hp
 # ff_feature_size = 10
 
 # Setup hyperparameter
-HP_TIME_STEP = hp.Hparam('timestep', hp.Discrete([2, 4, 6]))
-HP_CHANNEL_NUM = hp.Hparam('channel_num', hp.Discrete([2, 5, 10]))
+HP_TIME_STEP = hp.HParam('timestep', hp.Discrete([2, 4, 6]))
+HP_CHANNEL_NUM = hp.HParam('channel_num', hp.Discrete([2, 5, 10]))
 HP_KERNEL_SIZE = hp.HParam('cnn_kernel_size', hp.Discrete([3, 5, 9]))
 HP_POOL_SIZE = hp.HParam('cnn_pool_size', hp.Discrete([2, 4, 6]))
 HP_DROP_RATE = hp.HParam('cnn_drop_rate', hp.Discrete([0.2, 0.4, 0.6]))
