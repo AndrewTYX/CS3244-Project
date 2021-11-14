@@ -89,7 +89,7 @@ def train_test_model(hparams):
     raw_input_shape = (timestep, 2)
     base_input_shape = (timestep,4)
     csv_file_path = './train.csv'
-    ct_dir_path = './ct_interpolated_{channel_num}_dir.npy'
+    ct_dir_path = f'./ct_interpolated_{channel_num}_dir.npy'
 
     if not os.path.exists(ct_dir_path):
         print('CT dictionary not exists, craeting one...')

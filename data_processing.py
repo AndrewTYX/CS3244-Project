@@ -67,7 +67,7 @@ def split_ids(id_list, train_ratio, test_ratio, val_ratio):
     return train_ids, test_ids, val_ids ;
 
 def get_ct_for_patient(ct_dir, patient_id):
-    return ct_dir[patient_id]
+    return ct_dir.item().get(patient_id)
 
 def duplicate_with_timestep_length(arr, step, length):
     # Using hstack to duplicate
@@ -85,7 +85,7 @@ def get_baseline_for_patient(patient_df):
     data_encoded = patient_df
     data_encoded['Sex'] = labelencoder.fit_transform(data_encoded['Sex']) 
     data_encoded['SmokingStatus'] = labelencoder.fit_transform(data_encoded['SmokingStatus']) 
-    return data_encoded[['Age', 'Sex', 'SmokingStatus']].loc[0].to_numpy()
+    return data_encoded[['Age', 'Sex', 'SmokingStatus']].iloc[0].to_numpy()
     
     
 def create_seq(data, interp, steps, ct_dir):
@@ -98,11 +98,12 @@ def create_seq(data, interp, steps, ct_dir):
     if ID in BAD_IDS:
           continue
     patient = data.loc[data['Patient'] == ID]
+    patient_data = patient
     if interp: patient = interpolate_FVC(patient)
     p_x, p_y = construct_timeseries_input(patient, ['FVC', 'Weeks', 'FVC'], steps)
     length = len(p_x)
     ct_x = duplicate_with_timestep_length(get_ct_for_patient(ct_dir, ID), steps, length)
-    base_x = duplicate_with_timestep_length(get_baseline_for_patient(patient), steps, length)
+    base_x = duplicate_with_timestep_length(get_baseline_for_patient(patient_data), steps, length)
     
     if time_series_in.size == 0:
       time_series_in = p_x
@@ -121,7 +122,7 @@ def build_ds(df_path, ct_dir_path, patient_ids, timestep, mode='full'):
     #select data to fit the set
     dataset = pd.read_csv(df_path)
     data = dataset.loc[dataset['Patient'].isin(patient_ids)]
-    ct_dir = np.load(ct_dir_path)
+    ct_dir = np.load(ct_dir_path, allow_pickle=True)
     timeseries_ds, baseline_ds, ct_ds, label = create_seq(data, True, timestep, ct_dir)
 
     if mode == 'full':
