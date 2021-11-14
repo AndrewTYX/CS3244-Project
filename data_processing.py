@@ -71,18 +71,14 @@ def get_ct_for_patient(ct_dir, patient_id):
 
 def duplicate_with_timestep_length(arr, step, length):
     # Using hstack to duplicate
-    combined = np.array([])
+    combined = list()
     
-    for k in range(0, length):
-        res = np.expand_dims(arr, axis=0)
-        for i in range(0, step):
-            res = np.vstack((res, arr))
-        if combiend.size == 0:
-            combined = res
-        else:
-            combiend = np.concatenate((combined, res))
+    for i in range(0, step):
+      if i == 0: res = arr
+      else: res = np.vstack((res, arr))
     
-    return combined
+    combined = [res] * length
+    return np.array(combined)
 
 def get_baseline_for_patient(patient_df):
     labelencoder= LabelEncoder()
