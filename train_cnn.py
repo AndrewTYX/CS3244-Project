@@ -14,6 +14,29 @@ from tensorflow.keras import Model
 # Call back import
 from tensorflow.keras.callbacks import CSVLogger, ModelCheckpoint, EarlyStopping
 
+def build_baseline_model(input_shape):
+    input_layer = Input(input_shape)
+    conv_layer1 = Conv3D(filters=64, kernel_size=(3, 3, 3), activation='relu', padding='same')(input_layer)
+    pooling_layer1 = MaxPool3D(pool_size=(2, 2, 2), padding='same')(conv_layer1)
+    pooling_layer1 = BatchNormalization()(pooling_layer1)  
+    conv_layer2 = Conv3D(filters=64, kernel_size=(3, 3, 3), activation='relu', padding='same')(pooling_layer1)
+    pooling_layer2 = MaxPool3D(pool_size=(2, 2, 2), padding='same')(conv_layer2)
+    pooling_layer2 = BatchNormalization()(pooling_layer2)
+    
+    pooling_layer9 = BatchNormalization()(pooling_layer2)
+    flatten_layer = Flatten()(pooling_layer9)
+    
+    dense_layer3 = Dense(units=512, activation='relu')(flatten_layer)
+    dense_layer3 = Dropout(0.4)(dense_layer3)
+
+    dense_layer4 = Dense(units=256, activation='relu')(dense_layer3)
+    dense_layer4 = Dropout(0.4)(dense_layer3)
+  
+    output_layer = Dense(units=1, activation='linear')(dense_layer4)
+
+    model = Model(inputs=input_layer, outputs=output_layer)
+    return model
+
 def build_cnn_model(input_shape):
     input_layer = Input(input_shape)
     conv_layer1 = Conv3D(filters=64, kernel_size=(3, 3, 3), activation='relu', padding='same')(input_layer)
