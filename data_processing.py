@@ -1,10 +1,12 @@
 from datetime import time
+from re import S
 from numpy.lib.function_base import _parse_input_dimensions
 import pandas as pd
 import numpy as np
 import os
 import random
 import tensorflow as tf
+from tensorflow.python.ops.gen_array_ops import shape
 from generate_ct_data import save_np_arr_with_channel
 from sklearn.preprocessing import LabelEncoder 
 from scipy import interpolate
@@ -80,6 +82,18 @@ def duplicate_with_timestep_length(arr, step, length):
     combined = [res] * length
     return np.array(combined)
 
+def duplicate_with_timestep_length(arr, step, length):
+    # Using hstack to duplicate
+    combined = list()
+    
+    for i in range(0, step):
+      if i == 0: res = arr
+      else: res = np.stack((res, arr), axis=0)
+    
+    # print(res.shape)
+    combined = [res] * length
+    return np.array(combined)
+
 def get_baseline_for_patient(patient_df):
     labelencoder= LabelEncoder()
     data_encoded = patient_df
@@ -91,6 +105,8 @@ def get_baseline_for_patient(patient_df):
 def create_seq(data, interp, steps, ct_dir):
   print('[Data Preprocessing] Creating sequence for training')
   patient_ID = data['Patient'].unique()
+  size = len(patient_ID)
+  print(f'[Data Preprocessing] Current dataset length = {size}')
   time_series_in = np.array([])
   baseline_in = np.array([])
   ct_in = np.array([])
@@ -105,6 +121,7 @@ def create_seq(data, interp, steps, ct_dir):
     length = len(p_x)
     ct_x = duplicate_with_timestep_length(get_ct_for_patient(ct_dir, ID), steps, length)
     base_x = duplicate_with_timestep_length(get_baseline_for_patient(patient_data), steps, length)
+    ct_x = np.float32(ct_x)
     
     if time_series_in.size == 0:
       time_series_in = p_x

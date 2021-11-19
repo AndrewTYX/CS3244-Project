@@ -31,14 +31,14 @@ from tensorboard.plugins.hparams import api as hp
 # ff_feature_size = 10
 
 # Setup hyperparameter
-HP_TIME_STEP = hp.HParam('timestep', hp.Discrete([2, 4, 6]))
-HP_CHANNEL_NUM = hp.HParam('channel_num', hp.Discrete([2, 5, 10]))
-HP_KERNEL_SIZE = hp.HParam('cnn_kernel_size', hp.Discrete([3, 5, 9]))
-HP_POOL_SIZE = hp.HParam('cnn_pool_size', hp.Discrete([2, 4, 6]))
+HP_TIME_STEP = hp.HParam('timestep', hp.Discrete([2, 3, 4]))
+HP_CHANNEL_NUM = hp.HParam('channel_num', hp.Discrete([3, 6, 10]))
+HP_KERNEL_SIZE = hp.HParam('cnn_kernel_size', hp.Discrete([3]))
+HP_POOL_SIZE = hp.HParam('cnn_pool_size', hp.Discrete([2, 4]))
 HP_DROP_RATE = hp.HParam('cnn_drop_rate', hp.Discrete([0.2, 0.4, 0.6]))
-HP_LSTM_UNIT = hp.HParam('lstm_unit', hp.Discrete([20, 40, 50]))
+HP_LSTM_UNIT = hp.HParam('lstm_unit', hp.Discrete([50, 100]))
 HP_NN_FEATURES_SIZE = hp.HParam('nn_feature_size', hp.Discrete([10, 20, 30]))
-HP_FF_FEATURES_SIZE = hp.HParam('ff_feature_size', hp.Discrete([10, 20, 30]))
+HP_FF_FEATURES_SIZE = hp.HParam('ff_feature_size', hp.Discrete([5, 10, 15]))
 
 METRIC_LOSS = 'loss'
 
@@ -75,7 +75,6 @@ def generate_hparams_list():
 def generate_model_name(nn_feature_size, ff_feature_size, timestep, channel_num):
     return f'{nn_feature_size}_{ff_feature_size}_{timestep}_{channel_num}_model'
 
-
 def train_test_model(hparams):
     timestep = hparams[HP_TIME_STEP]
     channel_num = hparams[HP_CHANNEL_NUM]
@@ -85,28 +84,31 @@ def train_test_model(hparams):
     lstm_unit = hparams[HP_LSTM_UNIT]
     nn_feature_size = hparams[HP_NN_FEATURES_SIZE]
     ff_feature_size = hparams[HP_FF_FEATURES_SIZE]
-    ct_input_shape = (timestep,512, 512, 3, 1)
+    ct_input_shape = (timestep,512, 512, channel_num, 1)
     raw_input_shape = (timestep, 2)
-    base_input_shape = (timestep,4)
+    base_input_shape = (timestep,3)
     csv_file_path = './train.csv'
     ct_dir_path = f'./ct_interpolated_{channel_num}_dir.npy'
+    ds_buffer = './ds_buffer'
 
     if not os.path.exists(ct_dir_path):
         print('CT dictionary not exists, craeting one...')
         save_np_arr_with_channel(channel_num=channel_num)
         print('Create CT dictionary successfully!')
 
-    train_ds, test_ds, val_ds = build_ds_with_split(csv_file_path, ct_dir_path, timestep)
-
     model = build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
                         nn_feature_size, ff_feature_size, cnn_kernel_size, cnn_pool_size, cnn_drop_rate, lstm_unit)
-
+    model.summary()
 
     # Set up training
+    print('[Driver] Generating the model..')
     model_name = generate_model_name(nn_feature_size, ff_feature_size, timestep, channel_num)
-
+    print('[Driver] Generated model structure successfully!')
+    
+    train_ds, test_ds, val_ds = build_ds_with_split(csv_file_path, ct_dir_path, timestep)
+    print('[Driver] Generated datasets successfully!')
     model_path = './model_checkpoints/' + model_name
-    csv_log_path = './train_logs/' + model_name
+    csv_log_path = './train_logs/' + model_name + ".csv"
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
                 loss=tf.keras.losses.MeanSquaredError(),
@@ -115,7 +117,7 @@ def train_test_model(hparams):
     
     logdir = './board_log'
 
-    if not os.path.exits(logdir):
+    if not os.path.exists(logdir):
         print('Tensor board log dir not exist creating one...')
         os.mkdir('./board_log')
         print('Create tensorboard log dir successfully!')
@@ -129,7 +131,8 @@ def train_test_model(hparams):
     board_metric_callback = tf.keras.callbacks.TensorBoard(logdir)
     hp_callback = hp.KerasCallback(logdir, hparams)
 
-    model.fit(train_ds, validation_data = val_ds, epochs=1000, 
+    print(train_ds.element_spec)
+    model.fit(train_ds.batch(2), validation_data = val_ds, epochs=1000, verbose=0,
         callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback, board_metric_callback, hp_callback])
 
     _, loss = model.evaluate(test_ds)
@@ -139,7 +142,9 @@ def train_test_model(hparams):
     return loss
 
 session_num = 0
-
+mirrored_strategy = tf.distribute.MirroredStrategy()
+# mirrored_strategy = tf.distribute.MirroredStrategy(devices=["GPU:2"])
+mirrored_strategy = tf.distribute.MirroredStrategy(devices=["GPU:0","GPU:1","GPU:2"])
 hparams_list = generate_hparams_list()
 
 for params in hparams_list:
