@@ -84,9 +84,9 @@ def train_test_model(hparams):
     lstm_unit = hparams[HP_LSTM_UNIT]
     nn_feature_size = hparams[HP_NN_FEATURES_SIZE]
     ff_feature_size = hparams[HP_FF_FEATURES_SIZE]
-    ct_input_shape = (timestep,512, 512, channel_num, 1)
+    ct_input_shape = (512, 512, channel_num, 1)
     raw_input_shape = (timestep, 2)
-    base_input_shape = (timestep,3)
+    base_input_shape = (3,)
     csv_file_path = './train.csv'
     ct_dir_path = f'./ct_interpolated_{channel_num}_dir.npy'
     ds_buffer = './ds_buffer'
@@ -110,7 +110,7 @@ def train_test_model(hparams):
     model_path = './model_checkpoints/' + model_name
     csv_log_path = './train_logs/' + model_name + ".csv"
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01),
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.1),
                 loss=tf.keras.losses.MeanSquaredError(),
                 metrics=[tf.keras.metrics.MeanSquaredError(),
                         tf.keras.metrics.MeanAbsoluteError()])
@@ -131,11 +131,11 @@ def train_test_model(hparams):
     board_metric_callback = tf.keras.callbacks.TensorBoard(logdir)
     hp_callback = hp.KerasCallback(logdir, hparams)
 
-    print(train_ds.element_spec)
-    model.fit(train_ds.batch(2), validation_data = val_ds, epochs=1000, verbose=0,
+    print(train_ds.batch(2).element_spec)
+    model.fit(train_ds.batch(2), validation_data = val_ds.batch(2), epochs=2000, verbose=0,
         callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback, board_metric_callback, hp_callback])
 
-    _, loss = model.evaluate(test_ds)
+    _, loss = model.evaluate(test_ds.batch(2))
 
     print('Current loss = %d' % loss)
 

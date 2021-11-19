@@ -1,5 +1,6 @@
 from datetime import time
 from re import S
+from cv2 import CC_STAT_MAX
 from numpy.lib.function_base import _parse_input_dimensions
 import pandas as pd
 import numpy as np
@@ -7,7 +8,7 @@ import os
 import random
 import tensorflow as tf
 from tensorflow.python.ops.gen_array_ops import shape
-from generate_ct_data import save_np_arr_with_channel
+from generate_ct_data import generate_patient_ids, save_np_arr_with_channel
 from sklearn.preprocessing import LabelEncoder 
 from scipy import interpolate
 
@@ -119,20 +120,22 @@ def create_seq(data, interp, steps, ct_dir):
     if interp: patient = interpolate_FVC(patient)
     p_x, p_y = construct_timeseries_input(patient, ['FVC', 'Weeks', 'FVC'], steps)
     length = len(p_x)
-    ct_x = duplicate_with_timestep_length(get_ct_for_patient(ct_dir, ID), steps, length)
-    base_x = duplicate_with_timestep_length(get_baseline_for_patient(patient_data), steps, length)
-    ct_x = np.float32(ct_x)
+    # ct_x = get_ct_for_patient(ct_dir, ID)
+    
+    # base_x = get_baseline_for_patient(patient_data), steps, length
     
     if time_series_in.size == 0:
       time_series_in = p_x
       y_input = p_y
-      ct_in = ct_x
-      baseline_in = base_x
     else:
       time_series_in = np.concatenate((time_series_in, p_x))
       y_input = np.concatenate((y_input, p_y))
-      ct_in = np.concatenate((ct_in, ct_x))
-      baseline_in = np.concatenate((baseline_in, base_x))
+    # ct_list = ct_list.append(ct_x)
+    # base_list = base_list.append(base_x)
+  ids = set(patient_ID) - BAD_IDS
+  ct_in = np.stack([get_ct_for_patient(ct_dir, ID) for ID in ids])
+  ct_in = np.expand_dims(ct_in, axis=-1)
+  baseline_in = np.stack([get_baseline_for_patient(data.loc[data['Patient'] == ID]) for ID in ids])
   return tf.data.Dataset.from_tensor_slices(time_series_in),tf.data.Dataset.from_tensor_slices(ct_in), tf.data.Dataset.from_tensor_slices(baseline_in), tf.data.Dataset.from_tensor_slices(y_input)
     
     
@@ -144,7 +147,7 @@ def build_ds(df_path, ct_dir_path, patient_ids, timestep, mode='full'):
     timeseries_ds, baseline_ds, ct_ds, label = create_seq(data, True, timestep, ct_dir)
 
     if mode == 'full':
-      return tf.data.Dataset.zip(((ct_ds, timeseries_ds ,baseline_ds), label))
+      return tf.data.Dataset.zip(((baseline_ds, timeseries_ds, ct_ds), label))
     elif mode == 'ct':
       return tf.data.Dataset.zip(((ct_ds, timeseries_ds), label))
     else:
