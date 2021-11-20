@@ -131,11 +131,12 @@ def train_test_model(hparams):
     board_metric_callback = tf.keras.callbacks.TensorBoard(logdir)
     hp_callback = hp.KerasCallback(logdir, hparams)
 
-    print(train_ds.batch(2).element_spec)
-    model.fit(train_ds.batch(2), validation_data = val_ds.batch(2), epochs=2000, verbose=0,
+    print(train_ds.batch(1).element_spec)
+    model.fit(train_ds.batch(1), validation_data = val_ds.batch(1), epochs=2000, verbose=0,
         callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback, board_metric_callback, hp_callback])
 
-    _, loss = model.evaluate(test_ds.batch(2))
+    print('[Driver] Evaluating current model...')
+    _, loss = model.evaluate(test_ds.batch(1))
 
     print('Current loss = %d' % loss)
 

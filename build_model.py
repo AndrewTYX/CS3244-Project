@@ -79,7 +79,8 @@ def build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
     out = Concatenate()([x1, x2, x3])
     
     out = build_ff(time_feature_size = 2, nn_feature_size = nn_feature_size, ff_feature_size = ff_feature_size, units = ff_units)(out)
-    
+    out = Dense(16)(out)
+    out = Dense(32)(out)
     out = Dense(1)(out)
     model = Model([ct_input, time_input, base_input], out)
     
