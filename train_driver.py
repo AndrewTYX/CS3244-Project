@@ -106,11 +106,6 @@ def train_test_model(hparams):
     print('[Driver] Generated datasets successfully!')
     model_path = './model_checkpoints/' + model_name
     csv_log_path = './train_logs/' + model_name + ".csv"
-
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.1),
-                loss=tf.keras.losses.MeanSquaredError(),
-                metrics=[tf.keras.metrics.MeanSquaredError(),
-                        tf.keras.metrics.MeanAbsoluteError()])
     
     logdir = './board_log'
 
