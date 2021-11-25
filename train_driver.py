@@ -6,6 +6,9 @@ from tensorboard.plugins.hparams.summary_v2 import hparams
 import tensorflow as tf
 import numpy as np
 from itertools import product
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
+from tensorflow import keras
 from generate_ct_data import save_np_arr_with_channel
 
 # Layers and Models import
@@ -96,14 +99,8 @@ def train_test_model(hparams):
         save_np_arr_with_channel(channel_num=channel_num)
         print('Create CT dictionary successfully!')
 
-    model = build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
-                        nn_feature_size, ff_feature_size, cnn_kernel_size, cnn_pool_size, cnn_drop_rate, lstm_unit)
-    model.summary()
-
     # Set up training
-    print('[Driver] Generating the model..')
     model_name = generate_model_name(nn_feature_size, ff_feature_size, timestep, channel_num)
-    print('[Driver] Generated model structure successfully!')
     
     train_ds, test_ds, val_ds = build_ds_with_split(csv_file_path, ct_dir_path, timestep)
     print('[Driver] Generated datasets successfully!')
@@ -130,13 +127,26 @@ def train_test_model(hparams):
     earlystop_callback = EarlyStopping(monitor='loss', min_delta=1, patience=200)
     board_metric_callback = tf.keras.callbacks.TensorBoard(logdir)
     hp_callback = hp.KerasCallback(logdir, hparams)
-
-    print(train_ds.batch(1).element_spec)
-    model.fit(train_ds.batch(1), validation_data = val_ds.batch(1), epochs=2000, verbose=0,
-        callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback, board_metric_callback, hp_callback])
-
+    model = build_full_lstm(ct_input_shape, raw_input_shape, base_input_shape,
+                        nn_feature_size, ff_feature_size, cnn_kernel_size, cnn_pool_size, cnn_drop_rate, lstm_unit)
+    model.summary()
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.1),
+                loss=tf.keras.losses.MeanSquaredError(),
+                metrics=[tf.keras.metrics.MeanSquaredError(),
+                        tf.keras.metrics.MeanAbsoluteError()])
+    train_ds, test_ds, val_ds = build_ds_with_split(csv_file_path, ct_dir_path, timestep)
+    print('[Driver] Generated datasets successfully!')
+    if (os.path.exists(model_path)):
+        print('[Driver] Checkpoint exists, loading the best weight...')
+        model = keras.models.load_model(model_path)
+        print('[Driver] Loaded previous best weight!')
+    else:
+        print('[Driver] Checkpoint not exists, training the model...')
+        model.fit(train_ds.batch(1), validation_data = val_ds.batch(1), epochs=2000, verbose=0,
+            callbacks=[csv_logger_callback, checkpoint_callback, earlystop_callback, board_metric_callback, hp_callback])
+        print('[Driver] Trained successfully!')
     print('[Driver] Evaluating current model...')
-    _, loss = model.evaluate(test_ds.batch(1))
+    loss = model.evaluate(test_ds.batch(1))[2]
 
     print('Current loss = %d' % loss)
 
@@ -153,4 +163,5 @@ for params in hparams_list:
     print('--- Starting trial：%s' % run_name)
     print({h.name: params[h] for h in params})
     test_loss = train_test_model(params)
+    tf.keras.backend.clear_session()
     session_num += 1
