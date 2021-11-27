@@ -37,9 +37,9 @@ from tensorboard.plugins.hparams import api as hp
 HP_TIME_STEP = hp.HParam('timestep', hp.Discrete([2, 3, 4]))
 HP_CHANNEL_NUM = hp.HParam('channel_num', hp.Discrete([3, 6, 10]))
 HP_KERNEL_SIZE = hp.HParam('cnn_kernel_size', hp.Discrete([3]))
-HP_POOL_SIZE = hp.HParam('cnn_pool_size', hp.Discrete([2, 4]))
-HP_DROP_RATE = hp.HParam('cnn_drop_rate', hp.Discrete([0.2, 0.4, 0.6]))
-HP_LSTM_UNIT = hp.HParam('lstm_unit', hp.Discrete([50, 100]))
+HP_POOL_SIZE = hp.HParam('cnn_pool_size', hp.Discrete([4]))
+HP_DROP_RATE = hp.HParam('cnn_drop_rate', hp.Discrete([0.4]))
+HP_LSTM_UNIT = hp.HParam('lstm_unit', hp.Discrete([50]))
 HP_NN_FEATURES_SIZE = hp.HParam('nn_feature_size', hp.Discrete([10, 20, 30]))
 HP_FF_FEATURES_SIZE = hp.HParam('ff_feature_size', hp.Discrete([5, 10, 15]))
 
@@ -92,7 +92,6 @@ def train_test_model(hparams):
     base_input_shape = (3,)
     csv_file_path = './train.csv'
     ct_dir_path = f'./ct_interpolated_{channel_num}_dir.npy'
-    ds_buffer = './ds_buffer'
 
     if not os.path.exists(ct_dir_path):
         print('CT dictionary not exists, craeting one...')
